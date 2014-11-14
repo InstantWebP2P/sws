@@ -1,6 +1,6 @@
 var util = require('util');
 var events = require('events');
-var WebSocketServer = require('ws').Server;
+var WebSocketServer = require('wspp').Server;
 var SecureWebSocket = require('./sws').SecureWebSocket;
 
 

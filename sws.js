@@ -693,4 +693,4 @@
 	Export.SecureWebSocket.uint82array = uint82array;
 })(module  ? module.exports                    : window, 
    require ? require('tweetnacl/nacl-fast.js') : window.nacl,
-   require ? require('ws')                     : window.WebSocket);
+   require ? require('wspp')                   : window.WebSocket);
