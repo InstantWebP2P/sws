@@ -146,7 +146,10 @@
 																		
 									// send 
 									try {
-										self.ws.send(JSON.stringify(crm)/*, {binary: false, mask: false}*/);
+										if (isNodeJS())
+											self.ws.send(JSON.stringify(crm), {binary: false, mask: false});
+										else
+											self.ws.send(JSON.stringify(crm)/*, {binary: false, mask: false}*/);
 
 										// clear Handshake timeout
 										if (self.hs_tmo)
@@ -211,7 +214,10 @@
 
 			// send 
 			try {
-				self.ws.send(JSON.stringify(chm)/*, {binary: false, mask: false}*/);
+				if (isNodeJS())
+					self.ws.send(JSON.stringify(chm), {binary: false, mask: false});
+				else
+					self.ws.send(JSON.stringify(chm)/*, {binary: false, mask: false}*/);
 
 				// state -> SendClientHello
 				self.state = 'SendClientHello';
@@ -311,7 +317,10 @@
 
 								// send 
 								try {
-									self.ws.send(JSON.stringify(shm)/*, {binary: false, mask: false}*/);
+									if (isNodeJS())
+										self.ws.send(JSON.stringify(shm), {binary: false, mask: false});
+									else
+										self.ws.send(JSON.stringify(shm)/*, {binary: false, mask: false}*/);
 
 									// state -> SendServerHello
 									self.state = 'SendServerHello';
@@ -449,13 +458,20 @@
 						// write data out
 						try {
 							// TBD... flow control
-							var rc = self.ws.send(cipher/*, {binary: true, mask: false}*/);
-							if (fn) fn();
 
-							if (typeof rc === 'undefined' || rc === null)
-								ret = self.ws.bufferedAmount < SEND_WATER_MARK;
-							else
+							// check on node.js
+							var rc;
+							if (isNodeJS()) {
+								rc = self.ws.send(cipher, {binary: true, mask: false}, fn);
+							} else {
+								rc = self.ws.send(cipher/*, {binary: true, mask: false}*/);
+								if (fn) fn();
+							}
+
+							if (typeof rc === 'boolean')
 								ret = rc;
+							else
+								ret = self.ws.bufferedAmount < SEND_WATER_MARK;
 						} catch (e) {
 							if (fn) fn('ws.send failed:'+e);
 						}
@@ -727,6 +743,9 @@
 			console.log('invalid Uint8ToArray:'+JSON.stringify(data));
 			return null;
 		}
+	}
+	function isNodeJS() {
+		return (typeof module != 'undefined' && typeof window === 'undefined');
 	}
 	
 	// Export 
