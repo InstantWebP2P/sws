@@ -1,6 +1,9 @@
 var SecureWebSocket = require('../index.js');
 var SecureWebSocketServer = SecureWebSocket.Server;
+var Uint8ToBuffer = SecureWebSocket.Uint8ToBuffer;
 var nacl = require('tweetnacl/nacl-fast');
+var msgpack = require('msgpack-js');
+
 
 var skp = nacl.box.keyPair();
 var wss = new SecureWebSocketServer(
@@ -11,9 +14,12 @@ var wss = new SecureWebSocketServer(
 		});
 wss.on('connection', function(ws){
 	ws.on('message', function(message, flags){
+		///console.log('srv msg:'+JSON.stringify(message));
+		
 		if (flags.binary) {
-			console.log('server message:'+new Buffer(message).toString('utf-8'));
-			ws.send(message, {binary: true, mask: false});
+			///console.log('server message:'+new Buffer(message).toString('utf-8'));
+			console.log('server message:'+msgpack.decode(Uint8ToBuffer(message)));
+			ws.send(message);
 		} else 
 			console.error('Not support String message');
 	});
@@ -28,17 +34,21 @@ var ws = new SecureWebSocket(
 		});
 
 ws.onopen(function(){
-	console.log('connected');
+	console.log('secure ws connected');
 	
 	ws.onmessage(function(message, flags){
+		///console.log('cln msg:'+JSON.stringify(message));
+
 		if (flags.binary) {
-			console.log('client message:'+new Buffer(message).toString('utf-8'));
+			///console.log('client message:'+new Buffer(message).toString('utf-8'));
+			console.log('client message:'+msgpack.decode(Uint8ToBuffer(message)));
 		} else {
 			console.log('Not support String:'+JSON.stringify(message))
 		}
 	});
 	setInterval(function(){
-		ws.send(new Buffer('Hello,Am tom@'+Date.now(), 'utf-8'), {binary: true, mask: false});
+		///ws.send(new Buffer('Hello,Am tom@'+Date.now(), 'utf-8'));
+		ws.send(msgpack.encode('Hello,Am tom@'+Date.now()));
 	}, 2000);
 });
 
@@ -49,3 +59,8 @@ ws.on('warn', function(warn){
 ws.on('error', function(err){
 	console.log('Error: '+JSON.stringify(err));
 });
+
+
+
+
+

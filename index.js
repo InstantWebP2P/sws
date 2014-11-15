@@ -1,4 +1,5 @@
-module.exports = require('./sws').SecureWebSocket;
+var sws = require('./sws');
+module.exports = sws.SecureWebSocket;
 module.exports.Server = require('./SecureWebSocketServer');
 
 module.exports.createServer = function (options, connectionListener) {
@@ -16,3 +17,13 @@ module.exports.connect = module.exports.createConnection = function (address, se
   }
   return client;
 };
+
+// NACL
+module.exports.keyPair = sws.keyPair;
+module.exports.Box = sws.Box;
+module.exports.SecretBox = sws.SecretBox;
+
+// Utils
+module.exports.ArrayToUint8  = sws.ArrayToUint8;
+module.exports.Uint8ToArray  = sws.Uint8ToArray;
+module.exports.Uint8ToBuffer = sws.Uint8ToBuffer;
