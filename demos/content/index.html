@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+ <head> 
+  <script src="/nacl-fast.min.js"></script>
+  <script src="/msgpack.js"></script>
+  <script src="/sws.js"></script>
+
+  <script type="text/javascript">
+   function SecureWebSocket() {
+	if ("sws" in window) {
+		var kp = sws.keyPair();
+		var ws = new sws.SecureWebSocket('ws://localhost:6188/wspp', {myPublicKey: kp.publicKey, mySecretKey: kp.secretKey});
+
+		ws.onopen(function(){
+			console.log('secure ws connected');
+
+			ws.onmessage(function(data, flags){
+				if (flags.binary) {
+					var message = msgpack.decode(sws.Uint8ToBuffer(data));
+					console.log('client message:'+message);
+					///alert('client message:'+message);
+				} else {
+					console.log('Not support String message');
+				}
+			});
+
+			setInterval(function(){
+				ws.send(msgpack.encode('Hello,Am Tom@'+Date.now()));
+			}, 2000);
+		});
+		ws.onwarn(function(warn){
+			console.log('warn:'+warn);
+		});
+		ws.onclose(function() { 
+			// SecureWebSocket is closed.
+			console.log("Connection is closed..."); 
+		});
+	  } else {
+		// The browser doesn't support SecureWebSocket
+		alert("SecureWebSocket NOT supported by your Browser!");
+	  }
+     }
+	</script>
+ </head>
+
+ <body> 
+  <div id="sws">
+   <a href="javascript:SecureWebSocket()">Run SecureWebSocket</a>
+  </div>
+ </body>
+</html>
