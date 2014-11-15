@@ -742,4 +742,4 @@
 	Export.Uint8ToBuffer = Uint8ToBuffer;
 })(typeof module  !== 'undefined' ? module.exports                    :(window.sws = window.sws || {}), 
    typeof require !== 'undefined' ? require('tweetnacl/nacl-fast.js') : window.nacl,
-   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket);
+   typeof require !== 'undefined' ? require('wspp')                   : window.WebSocket);
