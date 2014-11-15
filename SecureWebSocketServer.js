@@ -60,7 +60,7 @@ SecureWebSocketServer.prototype.once = function(event, fn) {
 	};
 	var wsstemp = function() {
 		fn.apply(self.wss, arguments);
-		self.removeListener(event, wsstemp);
+		self.wss.removeListener(event, wsstemp);
 	};
 
 	if (event === 'connection')
