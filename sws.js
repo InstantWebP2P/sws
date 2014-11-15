@@ -452,10 +452,10 @@
 							var rc = self.ws.send(cipher/*, {binary: true, mask: false}*/);
 							if (fn) fn();
 
-							if (typeof rc === 'undefined' || rc === null)
-								ret = self.ws.bufferedAmount < SEND_WATER_MARK;
-							else
+							if (typeof rc === 'boolean')
 								ret = rc;
+							else
+								ret = self.ws.bufferedAmount < SEND_WATER_MARK;
 						} catch (e) {
 							if (fn) fn('ws.send failed:'+e);
 						}
