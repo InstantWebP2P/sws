@@ -1,3 +1,7 @@
+// SecureWebSocket Server implementation with NACL
+// Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
+
+
 var util = require('util');
 var events = require('events');
 var WebSocketServer = require('ws').Server;
