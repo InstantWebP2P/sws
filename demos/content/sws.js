@@ -1,3 +1,7 @@
+// SecureWebSocket implementation with NACL
+// Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
+
+
 (function(Export, Nacl, WebSocket){
 	var PROTO_VERSION = 1;
 	var SEND_WATER_MARK = 4096;
@@ -697,10 +701,7 @@
 		if (Array.isArray(data)) {
 			return data;
 		} else if (data instanceof Uint8Array) {
-			var ret = [];
-			for (var i = 0; i < data.length; i ++)
-				ret.push(data[i]&0xff);
-			return ret;
+			return Array.prototype.slice.call(data);
 		} else {
 			console.log('invalid Uint8ToArray:'+JSON.stringify(data));
 			return null;
