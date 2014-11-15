@@ -1,6 +1,6 @@
 {
   "author": "Tom Zhou (http://iwebpp.com)",
-  "name": "sws",
+  "name": "node-sws",
   "description": "SecureWebSocket implementation over NACL",
   "version": "1.0.0",
   "repository": {
@@ -17,9 +17,9 @@
   },
   "main": "./index",
   "dependencies": {
-    "wspp": "latest",
-    "ws": "latest",
-    "tweetnacl": "latest"
+    "wspp": "0.4.32",
+    "ws": "0.4.32",
+    "tweetnacl": "0.12.2"
   },
   "devDependencies": {
     "connect": "2.8.1",
