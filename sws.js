@@ -416,24 +416,24 @@
 		self.sendCache = [];
 	};
 	SecureWebSocket.prototype.onopen = function(fn) {
-		this.events['open'] = [];
+		///this.events['open'] = [];
 		this.on('open', fn);
 	};
 	SecureWebSocket.prototype.onmessage = function(fn) {
-		this.events['message'] = [];
+		///this.events['message'] = [];
 	    this.on('message', fn);
 	};
 	SecureWebSocket.prototype.onerror = function(fn) {
-		this.events['error'] = [];
+		///this.events['error'] = [];
 		this.on('error', fn);
 		this.ws.onerror = fn;
 	};
 	SecureWebSocket.prototype.onwarn = function(fn) {
-		this.events['warn'] = [];
+		///this.events['warn'] = [];
 		this.on('warn', fn);
 	};
 	SecureWebSocket.prototype.onclose = function(fn) {
-		this.events['close'] = [];
+		///this.events['close'] = [];
 		this.ws.onclose = fn;
 	};
 
@@ -500,15 +500,20 @@
 	};
 	SecureWebSocket.prototype.pause = function() {
 		var self = this;
-		if (self.ws && self.ws.pause) self.ws.pause();
+		if (self.state === 'HandshakeDone' && 
+			self.ws && self.ws.pause) 
+			self.ws.pause();
 	};
 	SecureWebSocket.prototype.resume = function() {
 		var self = this;
-		if (self.ws && self.ws.resume) self.ws.resume();
+		if (self.state === 'HandshakeDone' && 
+			self.ws && self.ws.resume) 
+			self.ws.resume();
 	};
 	SecureWebSocket.prototype.terminate = function() {
 		var self = this;
-		if (self.ws && self.ws.terminate) self.ws.terminate();
+		if (self.ws && self.ws.terminate) 
+			self.ws.terminate();
 	};
 	
 	// EventEmitter
@@ -521,19 +526,21 @@
 		
 		return self;
 	};	
-	SecureWebSocket.prototype.emit = function(event, message, flags, cb) {
+	SecureWebSocket.prototype.emit = function() {		
 		var self = this;
-		
+		var event = arguments[0] || 'unknown';
+		var args = Array.prototype.slice.call(arguments, 1);
+
 		if (self.events && self.events[event]) {
 			self.events[event].forEach(function(fn) {
-			    if (fn && typeof fn === 'function')
-			    	fn(message, flags, cb);
+				if (fn && typeof fn === 'function')
+					fn.apply(self, args);
 			});
 		} else {
 			console.log('Unknown event:'+event);
 			return false;
 		}
-		
+
 		return true;
 	}
 	

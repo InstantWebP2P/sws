@@ -1,6 +1,7 @@
 var sws = require('./sws');
 module.exports = sws.SecureWebSocket;
 module.exports.Server = require('./SecureWebSocketServer');
+module.exports.Stream = require('./SecureStream');
 
 module.exports.createServer = function (options, connectionListener) {
   var server = new module.exports.Server(options, options.secinfo || options);
@@ -19,8 +20,8 @@ module.exports.connect = module.exports.createConnection = function (address, se
 };
 
 // NACL
-module.exports.keyPair = sws.keyPair;
-module.exports.Box = sws.Box;
+module.exports.keyPair   = sws.keyPair;
+module.exports.Box       = sws.Box;
 module.exports.SecretBox = sws.SecretBox;
 
 // Utils

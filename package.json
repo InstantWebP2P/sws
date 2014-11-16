@@ -19,7 +19,8 @@
   "dependencies": {
     "wspp": "0.4.32",
     "ws": "0.4.32",
-    "tweetnacl": "0.12.2"
+    "tweetnacl": "0.12.2",
+    "readable-stream": "1.0.33"
   },
   "devDependencies": {
     "connect": "2.8.1",
