@@ -19,6 +19,9 @@
 					var message = msgpack.decode(sws.Uint8ToBuffer(data));
 					console.log('client message:'+message);
 					///alert('client message:'+message);
+					
+					// append log
+					document.getElementById("log").value += '\n'+message;
 				} else {
 					console.log('Not support String message');
 				}
@@ -47,5 +50,9 @@
   <div id="sws">
    <a href="javascript:SecureWebSocket()">Run SecureWebSocket</a>
   </div>
+
+  <textarea id="log" rows="20" cols="50">
+  </textarea >
+	
  </body>
 </html>
