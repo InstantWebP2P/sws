@@ -11,6 +11,11 @@ SecureWebSocket implementation over NACL
 * Used as stream, refer to tests/stream.js, support Node.js only
 
 
+### Spec/RFC
+
+* https://github.com/InstantWebP2P/sws-spec
+
+
 ### Install
 
 * npm install node-sws
