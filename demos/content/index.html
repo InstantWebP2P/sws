@@ -16,7 +16,7 @@
 
 			ws.onmessage(function(data, flags){
 				if (flags.binary) {
-					var message = msgpack.decode(sws.Uint8ToBuffer(data));
+					var message = msgpack.decode(data);
 					console.log('client message:'+message);
 					///alert('client message:'+message);
 					

@@ -26,7 +26,7 @@ var swss = sws.createServer({
 swss.on('connection', function(ws){
 	ws.on('message', function(message, flags){
 		if (flags.binary) {
-			var data = msgpack.decode(sws.Uint8ToBuffer(message));
+			var data = msgpack.decode(message);
 			console.log('Server message:'+data);
 			ws.send(message);
 		} else {
