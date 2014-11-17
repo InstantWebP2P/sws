@@ -11,6 +11,11 @@ SecureWebSocket implementation over NACL
 * Used as stream, refer to tests/stream.js, support Node.js only
 
 
+### Install
+
+* npm install node-sws
+
+
 <br/>
 ### License
 (The MIT License)
