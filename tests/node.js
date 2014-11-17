@@ -17,7 +17,7 @@ wss.on('connection', function(ws){
 		///console.log('srv msg:'+JSON.stringify(message));
 		
 		if (flags.binary) {
-			console.log('server message:'+msgpack.decode(Uint8ToBuffer(message)));
+			console.log('server message:'+msgpack.decode(message));
 			ws.send(message);
 		} else 
 			console.error('Not support String message');
@@ -39,7 +39,7 @@ ws.onopen(function(){
 		///console.log('cln msg:'+JSON.stringify(message));
 
 		if (flags.binary) {
-			console.log('client message:'+msgpack.decode(Uint8ToBuffer(message)));
+			console.log('client message:'+msgpack.decode(message));
 		} else {
 			console.log('Not support String:'+JSON.stringify(message))
 		}

@@ -60,8 +60,6 @@
 					throw new Error('Invalid nacl CA');
 		}
 		
-		// FSM: new->connected->HandshakeStart->SendClientHello->
-		//      RecvServerHello->SendClientReady->HandshakeDone
 		self.state = 'new';
 		self.ws = self.isServer ? self.ws : new WebSocket(url);
 		// use arrayBuffer as binaryType
@@ -69,9 +67,14 @@
 
 		// Handshake process
 		var client_handshake = function() {
+			// FSM: new->connected->HandshakeStart->SendClientHello->
+			//      RecvServerHello->SendClientReady->HandshakeDone
+
 			// state -> connected
 			self.state = 'connected';
-			
+			// state -> HandshakeStart
+			self.state = 'HandshakeStart';
+						
 			// Handshake message handle
 			self.ws.onmessage = function(msg){
 				///console.log('client msg,type:'+JSON.stringify(msg.type));
@@ -93,7 +96,8 @@
 							self.rxSecretBox.incrNonce();
 							
 							// notify data
-							self.emit('message', plain, {binary: true});
+							// TBD... optimizing on Uint8Array To Buffer copy
+							self.emit('message', Uint8ToBuffer(plain), {binary: true});
 						} else {
 							self.emit('warn', 'Attacked message:'+JSON.stringify(message));
 						}
@@ -101,7 +105,7 @@
 						// TBD... String
 						self.emit('error', 'Not support String message');
 					}
-				} else if (self.state === 'HandshakeStart') {
+				} else if (self.state === 'SendClientHello') {
 					// Handshake process
 					if (flags && !flags.binary) {
 						try {
@@ -227,9 +231,6 @@
 				return;
 			}
 			
-			// state -> HandshakeStart
-			self.state = 'HandshakeStart';
-			
 			// 2.
 			// Start hand-shake timer
 			self.hs_tmo = setTimeout(function(){
@@ -244,6 +245,9 @@
 
 		// server client handshake
 		var server_handshake = function() {
+			// FSM: new->connected->HandshakeStart->RecvClientHello->
+			//      SendServerHello->RecvClientReady->HandshakeDone
+
 			// state -> connected
 			self.state = 'connected';
 			
@@ -268,7 +272,8 @@
 							self.rxSecretBox.incrNonce();
 
 							// notify data
-							self.emit('message', plain, {binary: true});
+							// TBD... optimizing on Uint8Array To Buffer copy
+							self.emit('message', Uint8ToBuffer(plain), {binary: true});
 						} else {
 							self.emit('warn', 'Attacked message:'+JSON.stringify(message));
 						}

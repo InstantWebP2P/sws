@@ -26,14 +26,14 @@ var SecureStream = module.exports = function(sws, options) {
 	
 	self.sws.onmessage(function(message, flags) {
 		///console.log('ss message:'+JSON.stringify(message));
-		
-		if (message && message instanceof Uint8Array) {
-			var chunk = Uint8ToBuffer(message);
-			if (!self.push(chunk))
+
+		if (message && Buffer.isBuffer(message)) {
+			if (!self.push(message))
 				if (self.sws && self.sws.pause)
 					self.sws.pause();
-		} else if (message && message instanceof Buffer) {
-			if (!self.push(message))
+		} else if (message && message instanceof Uint8Array) {
+			var chunk = Uint8ToBuffer(message);
+			if (!self.push(chunk))
 				if (self.sws && self.sws.pause)
 					self.sws.pause();
 		} else {
