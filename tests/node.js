@@ -17,7 +17,6 @@ wss.on('connection', function(ws){
 		///console.log('srv msg:'+JSON.stringify(message));
 		
 		if (flags.binary) {
-			///console.log('server message:'+new Buffer(message).toString('utf-8'));
 			console.log('server message:'+msgpack.decode(Uint8ToBuffer(message)));
 			ws.send(message);
 		} else 
@@ -40,14 +39,12 @@ ws.onopen(function(){
 		///console.log('cln msg:'+JSON.stringify(message));
 
 		if (flags.binary) {
-			///console.log('client message:'+new Buffer(message).toString('utf-8'));
 			console.log('client message:'+msgpack.decode(Uint8ToBuffer(message)));
 		} else {
 			console.log('Not support String:'+JSON.stringify(message))
 		}
 	});
 	setInterval(function(){
-		///ws.send(new Buffer('Hello,Am tom@'+Date.now(), 'utf-8'));
 		ws.send(msgpack.encode('Hello,Am tom@'+Date.now()));
 	}, 2000);
 });
