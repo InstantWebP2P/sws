@@ -3,6 +3,14 @@ sws
 
 SecureWebSocket implementation over NACL
 
+
+### API/Usage
+
+* In Node.js, refer to tests/node.js
+* In Browser, refer to demos/srv.js, demos/content/
+* Used as stream, refer to tests/stream.js, support Node.js only
+
+
 <br/>
 ### License
 (The MIT License)
