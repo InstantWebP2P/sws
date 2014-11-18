@@ -442,9 +442,6 @@
 		this.ws.onclose = fn;
 	};
 
-	SecureWebSocket.prototype.close = function(fn) {
-	    this.ws.close();
-	};
 	SecureWebSocket.prototype.send = function(message, fn) {
 		var self = this;
 		var ret = true;
@@ -519,6 +516,11 @@
 		var self = this;
 		if (self.ws && self.ws.terminate) 
 			self.ws.terminate();
+	};
+	SecureWebSocket.prototype.close = function(fn) {
+		var self = this;
+		if (self.ws && self.ws.close) 
+			self.ws.close();
 	};
 	
 	// EventEmitter
