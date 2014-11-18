@@ -56,6 +56,7 @@ var SecureStream = module.exports = function(sws, options) {
 
 util.inherits(SecureStream, Dupplex);
 
+// Duplex implementation
 SecureStream.prototype._read = function(size) {
 	var self = this;
 
@@ -76,4 +77,18 @@ SecureStream.prototype._write = function(chunk, encoding, callback) {
 	}
 }
 
+// Expose sws close,terminate
+SecureStream.prototype.close = function() {
+	var self = this;
+
+	if (self.sws && self.sws.close)
+		self.sws.close();
+}
+
+SecureStream.prototype.terminate = function() {
+	var self = this;
+
+	if (self.sws && self.sws.terminate)
+		self.sws.terminate();
+}
 
