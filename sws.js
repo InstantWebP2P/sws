@@ -4,8 +4,8 @@
 
 (function(Export, Nacl, WebSocket){
 	var PROTO_VERSION = 1;
-	var SEND_WATER_MARK = 4096;
-	var RECV_WATER_MARK = 4096;
+	var SEND_WATER_MARK = 16*1024;
+	var RECV_WATER_MARK = 16*1024;
 
 	// secure WebSocket 
 	var SecureWebSocket = function(url, secinfo) {
