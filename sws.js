@@ -3,7 +3,6 @@
 
 
 (function(Export, Nacl, WebSocket){
-	var PROTO_VERSION = 1;
 	var SEND_WATER_MARK = 16*1024;
 	var RECV_WATER_MARK = 16*1024;
 
@@ -31,6 +30,15 @@
 		} else 
 			throw new Error('Invalid parameters');
 				
+		// Check on secinfo
+		secinfo = secinfo || {};
+		
+		// Check on Version
+		secinfo.version = secinfo.version || 1;
+		
+		// TBD version 2 with cert
+		var PROTO_VERSION = secinfo.version;
+
 		// Check security info
 		if (PROTO_VERSION >= 1) {
 			// setup V1
@@ -419,6 +427,9 @@
 		
 		// Send cache
 		self.sendCache = [];
+		
+		// Browser compatible event API
+		// TBD...
 	};
 	SecureWebSocket.prototype.onopen = function(fn) {
 		///this.events['open'] = [];
