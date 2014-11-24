@@ -2,10 +2,9 @@
 // Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
 
 
-(function(Export, Nacl, WebSocket){
-	var PROTO_VERSION = 1;
-	var SEND_WATER_MARK = 4096;
-	var RECV_WATER_MARK = 4096;
+(function(Export, Nacl, WebSocket, Naclcert){
+	var SEND_WATER_MARK = 16*1024;
+	var RECV_WATER_MARK = 16*1024;
 
 	// secure WebSocket 
 	var SecureWebSocket = function(url, secinfo) {
@@ -31,6 +30,15 @@
 		} else 
 			throw new Error('Invalid parameters');
 				
+		// Check on secinfo
+		secinfo = secinfo || {};
+		
+		// Check on Version
+		secinfo.version = secinfo.version || 1;
+		
+		// TBD version 2 with cert
+		var PROTO_VERSION = secinfo.version;
+
 		// Check security info
 		if (PROTO_VERSION >= 1) {
 			// setup V1
@@ -51,13 +59,15 @@
 		if (PROTO_VERSION >= 2) {
 			// setup V2
 			self.myCert = secinfo.cert;
-			self.caCert = secinfo.ca;
+			self.caCert = secinfo.ca || Naclcert.rootCA;
 
-			// check V2
-			if (!self.myCert)
-					throw new Error('Invalid nacl cert');
-			if (!self.caCert)
-					throw new Error('Invalid nacl CA');
+			// client always request server's Cert
+			// server can request or not-request client's Cert
+			if (self.isServer) {
+				self.requestCert = typeof secinfo.requestCert !== 'undefined' ? secinfo.requestCert : false;
+			} else {
+				self.requestCert = true;
+			}
 		}
 		
 		self.state = 'new';
@@ -114,7 +124,34 @@
 							if (shm && shm.opc === 1 && shm.version === PROTO_VERSION) {
 								///console.log('ServerHello message<-:'+JSON.stringify(shm));
 
+								// check server's PublicKey Cert
+								if (PROTO_VERSION >= 2) {
+									// check cert
+									if (!(Naclcert.validate(shm.cert, self.caCert) && 
+										  compareArray(shm.server_public_key, shm.cert.desc.publickey))) {
+										console.log('Invalid server cert');
+										self.emit('error', 'Invalid server cert');
+										self.ws.close();
+										return;
+									}
+									// check domain or ip
+									var serverUrl = parseURL(self.url);
+									var srvDomain = serverUrl.hostname || '';
+									var srvIP = isNodeJS() ? self.ws._socket.remoteAddress : '';
+									///console.log('expected server ip:'+srvIP);
+									///console.log('expected server domain:'+srvDomain);
+									if (!(Naclcert.checkDomain(shm.cert, srvDomain) ||
+										  Naclcert.checkIP(shm.cert, srvIP))) {
+										console.log('Invalid server endpoing');
+										self.emit('error', 'Invalid server endpoing');
+										self.ws.close();
+										return;
+									}
+									// record server's cert
+									self.serverCert = shm.cert;
+								}
 								self.theirPublicKey = ArrayToUint8(shm.server_public_key);
+
 								// extract rxsharedKey, nonce
 								var rx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.myNonce);
 								var rx_nonce_share_key = rx_tempbox.open(ArrayToUint8(shm.s_nonce_share_key_a));
@@ -146,6 +183,17 @@
 
 											s_nonce_share_key_a: Uint8ToArray(s_tx_nonce_share_key)
 									};
+									//  check if need cert
+									if (shm.requestCert) {
+										if (self.myCert) {
+											crm.cert = self.myCert;
+										} else {
+											console.log('Miss client cert');
+											self.emit('error', 'Miss client cert');
+											self.ws.close();
+											return;
+										}
+									}
 									///console.log("ClientReady message->:" + JSON.stringify(crm));
 																		
 									// send 
@@ -318,6 +366,18 @@
 										server_public_key: Uint8ToArray(self.myPublicKey),
 										s_nonce_share_key_a: Uint8ToArray(s_tx_nonce_share_key)
 								};
+								//  check if send cert
+								if (PROTO_VERSION >= 2) {
+									if (self.myCert) {
+										shm.cert = self.myCert;
+										shm.requestCert = self.requestCert;
+									} else {
+										console.log('Miss server cert');
+										self.emit('error', 'Miss server cert');
+										self.ws.close();
+										return;
+									}
+								}
 								///console.log("ServerHello message->:" + JSON.stringify(shm));
 
 								// send 
@@ -351,6 +411,30 @@
 							if (crm && crm.opc === 2 && crm.version === PROTO_VERSION) {
 								///console.log('ClientReady message<-:'+JSON.stringify(crm));
 
+								// check client's PublicKey Cert
+								if (PROTO_VERSION >= 2 && self.requestCert) {
+									// check cert
+									if (!(crm.cert && 
+										  Naclcert.validate(crm.cert, self.caCert) && 
+										  compareArray(self.theirPublicKey, crm.cert.desc.publickey))) {
+										console.log('Invalid client cert');
+										self.emit('error', 'Invalid client cert');
+										self.ws.close();
+										return;
+									}
+									// check ip
+									var clnIP = self.ws._socket.remoteAddress;
+									///console.log('expected client ip:'+clnIP);
+									if (!Naclcert.checkIP(crm.cert, clnIP)) {
+										console.log('Invalid client endpoing');
+										self.emit('error', 'Invalid client endpoing');
+										self.ws.close();
+										return;
+									}
+									// record client's cert
+									self.clientCert = crm.cert;
+								}
+								
 								// extract rxsharedKey, nonce
 								var rx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.myNonce);
 								var rx_nonce_share_key = rx_tempbox.open(ArrayToUint8(crm.s_nonce_share_key_a));
@@ -419,6 +503,9 @@
 		
 		// Send cache
 		self.sendCache = [];
+		
+		// Browser compatible event API
+		// TBD...
 	};
 	SecureWebSocket.prototype.onopen = function(fn) {
 		///this.events['open'] = [];
@@ -442,9 +529,6 @@
 		this.ws.onclose = fn;
 	};
 
-	SecureWebSocket.prototype.close = function(fn) {
-	    this.ws.close();
-	};
 	SecureWebSocket.prototype.send = function(message, fn) {
 		var self = this;
 		var ret = true;
@@ -519,6 +603,11 @@
 		var self = this;
 		if (self.ws && self.ws.terminate) 
 			self.ws.terminate();
+	};
+	SecureWebSocket.prototype.close = function(fn) {
+		var self = this;
+		if (self.ws && self.ws.close) 
+			self.ws.close();
 	};
 	
 	// EventEmitter
@@ -760,6 +849,45 @@
 		return (typeof module != 'undefined' && typeof window === 'undefined');
 	}
 	
+	function parseURL(url) {
+		if (isNodeJS()) {
+			var URL = require('url');
+			return URL.parse(url);
+		} else {
+			var parser = document.createElement('a'),
+				searchObject = {},
+				queries, split, i;
+			// Let the browser do the work
+			parser.href = url;
+			// Convert query string to object
+			queries = parser.search.replace(/^\?/, '').split('&');
+			for( i = 0; i < queries.length; i++ ) {
+				split = queries[i].split('=');
+				searchObject[split[0]] = split[1];
+			}
+			return {
+				    protocol: parser.protocol,
+				        host: parser.host,
+				    hostname: parser.hostname,
+				        port: parser.port,
+				    pathname: parser.pathname,
+				      search: parser.search,
+				searchObject: searchObject,
+				        hash: parser.hash
+			};
+		}
+	}
+	
+	function compareArray(a, b) {
+		if (a.length != b.length)
+			return false;
+		else for (var i = 0; i < a.length; i ++)
+			if (a[i]!==b[i])
+				return false;
+
+		return true;
+	}
+	
 	// Export 
 	Export.SecureWebSocket = SecureWebSocket;
 	
@@ -769,9 +897,13 @@
 	Export.Box       = Box;
 	Export.SecretBox = SecretBox;
 	
+	// Nacl Cert
+	Export.Naclcert  = Naclcert;
+	
 	Export.ArrayToUint8  = ArrayToUint8;
 	Export.Uint8ToArray  = Uint8ToArray;
 	Export.Uint8ToBuffer = Uint8ToBuffer;
 })(typeof module  !== 'undefined' ? module.exports                    :(window.sws = window.sws || {}), 
    typeof require !== 'undefined' ? require('tweetnacl/nacl-fast.js') : window.nacl,
-   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket);
+   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket,
+   typeof require !== 'undefined' ? require('nacl-cert')              : window.naclcert);

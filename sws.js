@@ -138,8 +138,8 @@
 									var serverUrl = parseURL(self.url);
 									var srvDomain = serverUrl.hostname || '';
 									var srvIP = isNodeJS() ? self.ws._socket.remoteAddress : '';
-									console.log('expected server ip:'+srvIP);
-									console.log('expected server domain:'+srvDomain);
+									///console.log('expected server ip:'+srvIP);
+									///console.log('expected server domain:'+srvDomain);
 									if (!(Naclcert.checkDomain(shm.cert, srvDomain) ||
 										  Naclcert.checkIP(shm.cert, srvIP))) {
 										console.log('Invalid server endpoing');
@@ -424,7 +424,7 @@
 									}
 									// check ip
 									var clnIP = self.ws._socket.remoteAddress;
-									console.log('expected client ip:'+clnIP);
+									///console.log('expected client ip:'+clnIP);
 									if (!Naclcert.checkIP(crm.cert, clnIP)) {
 										console.log('Invalid client endpoing');
 										self.emit('error', 'Invalid client endpoing');
@@ -896,6 +896,9 @@
 	
 	Export.Box       = Box;
 	Export.SecretBox = SecretBox;
+	
+	// Nacl Cert
+	Export.Naclcert  = Naclcert;
 	
 	Export.ArrayToUint8  = ArrayToUint8;
 	Export.Uint8ToArray  = Uint8ToArray;

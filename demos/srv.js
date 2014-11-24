@@ -35,5 +35,9 @@ swss.on('connection', function(ws){
 	});
 });
 
+// V2 with NaclCert
+
+var ckp = sws.keyPair();
+
 app.listen(6188);
 console.log('SecureWebSocketServer listen on 6188');
