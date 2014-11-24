@@ -67,7 +67,7 @@ var srvReqDesc = {
 	type: 'ca',
 	tte: new Date('2016-01-01').getTime(),
 	publickey: naclcert.Uint8ToArray(srvkp.publicKey),
-	names: ['51dese.com', 'ruyier.com', 'localhost'],
+	names: ['localhost', '51dese.com', 'ruyier.com', 'localhost'],
 	ips: ['127.0.0.1']
 };
 var srvcert = naclcert.generate(srvReqDesc, rootCA.secretkey, rootCA.cert);
@@ -78,7 +78,7 @@ var clnReqDesc = {
 	type: 'ca',
 	tte: new Date('2016-01-01').getTime(),
 	publickey: naclcert.Uint8ToArray(clnkp.publicKey),
-	names: [],
+	names: ['localhost'],
 	ips: ['127.0.0.1']
 };
 var clncert = naclcert.generate(clnReqDesc, rootCA.secretkey, rootCA.cert);
@@ -108,7 +108,7 @@ cwss.on('connection', function(ws){
 });
 
 var cws = new SecureWebSocket(
-		'ws://127.0.0.1:6688/wspp', 
+		'ws://localhost:6688/wspp', 
 		{
 			    version: 2,
 			       cert: clncert,
