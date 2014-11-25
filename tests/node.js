@@ -90,7 +90,7 @@ var cwss = new SecureWebSocketServer(
 				    version: 2,
 				       cert: srvcert,
 				         ca: rootCA.cert,
-				requestCert: true,
+				requireCert: true,
 				
 				myPublicKey: srvkp.publicKey,
 				mySecretKey: srvkp.secretKey,
@@ -113,7 +113,6 @@ var cws = new SecureWebSocket(
 			    version: 2,
 			       cert: clncert,
 			         ca: rootCA.cert,
-			requestCert: true,
 			
 				myPublicKey: clnkp.publicKey,
 				mySecretKey: clnkp.secretKey
