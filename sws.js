@@ -36,7 +36,7 @@
 		// Check on Version
 		secinfo.version = secinfo.version || 1;
 		
-		// TBD version 2 with cert
+		// version
 		var PROTO_VERSION = secinfo.version;
 
 		// Check security info
@@ -143,10 +143,15 @@
 										crobj = JSON.parse(crstr);
 										
 										// check cert
-										if (!(Naclcert.validate(crobj.cert, self.caCert) && 
-											  compareArray(shm.server_public_key, crobj.cert.desc.publickey))) {
+										if (!Naclcert.validate(crobj.cert, self.caCert)) {
 											console.log('Invalid server cert');
 											self.emit('error', 'Invalid server cert');
+											self.ws.close();
+											return;
+										}
+										if (!compareArray(shm.server_public_key, crobj.cert.desc.publickey)) {
+											console.log('Unexpected server cert');
+											self.emit('error', 'Unexpected server cert');
 											self.ws.close();
 											return;
 										}
@@ -491,10 +496,15 @@
 										certobj = JSON.parse(certstr);
 
 										// check cert
-										if (!(Naclcert.validate(certobj, self.caCert) && 
-											  compareArray(self.theirPublicKey, certobj.desc.publickey))) {
+										if (!Naclcert.validate(certobj, self.caCert)) {
 											console.log('Invalid client cert');
 											self.emit('error', 'Invalid client cert');
+											self.ws.close();
+											return;
+										}
+										if (!compareArray(self.theirPublicKey, certobj.desc.publickey)) {
+											console.log('Unexpected client cert');
+											self.emit('error', 'Unexpected client cert');
 											self.ws.close();
 											return;
 										}
@@ -976,6 +986,9 @@
 	}
 	
 	function compareArray(a, b) {
+		///console.log('array a:'+JSON.stringify(a));
+		///console.log('array b:'+JSON.stringify(b));
+
 		if (a.length != b.length)
 			return false;
 		else for (var i = 0; i < a.length; i ++)
