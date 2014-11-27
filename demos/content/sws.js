@@ -59,7 +59,7 @@
 		if (PROTO_VERSION >= 2) {
 			// setup V2
 			self.myCert = secinfo.cert;
-			self.caCert = secinfo.ca || Naclcert.rootCA;
+			self.caCert = secinfo.ca || Naclcert.rootCACert;
 
 			// client always request server's Cert
 			// server can request or not-request client's Cert
