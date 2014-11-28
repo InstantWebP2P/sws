@@ -2,10 +2,9 @@
 // Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
 
 
-(function(Export, Nacl, WebSocket){
-	var PROTO_VERSION = 1;
-	var SEND_WATER_MARK = 4096;
-	var RECV_WATER_MARK = 4096;
+(function(Export, Nacl, WebSocket, Naclcert){
+	var SEND_WATER_MARK = 16*1024;
+	var RECV_WATER_MARK = 16*1024;
 
 	// secure WebSocket 
 	var SecureWebSocket = function(url, secinfo) {
@@ -31,6 +30,15 @@
 		} else 
 			throw new Error('Invalid parameters');
 				
+		// Check on secinfo
+		secinfo = secinfo || {};
+		
+		// Check on Version
+		secinfo.version = secinfo.version || 1;
+		
+		// version
+		var PROTO_VERSION = secinfo.version;
+
 		// Check security info
 		if (PROTO_VERSION >= 1) {
 			// setup V1
@@ -51,13 +59,15 @@
 		if (PROTO_VERSION >= 2) {
 			// setup V2
 			self.myCert = secinfo.cert;
-			self.caCert = secinfo.ca;
+			self.caCert = secinfo.ca || Naclcert.rootCACert;
 
-			// check V2
-			if (!self.myCert)
-					throw new Error('Invalid nacl cert');
-			if (!self.caCert)
-					throw new Error('Invalid nacl CA');
+			// client always request server's Cert
+			// server can request or not-request client's Cert
+			if (self.isServer) {
+				self.requireCert = typeof secinfo.requireCert !== 'undefined' ? secinfo.requireCert : false;
+			} else {
+				self.requireCert = true;
+			}
 		}
 		
 		self.state = 'new';
@@ -115,14 +125,54 @@
 								///console.log('ServerHello message<-:'+JSON.stringify(shm));
 
 								self.theirPublicKey = ArrayToUint8(shm.server_public_key);
-								// extract rxsharedKey, nonce
+
+								// extract rxsharedKey, nonce, cert, requirecert
 								var rx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.myNonce);
-								var rx_nonce_share_key = rx_tempbox.open(ArrayToUint8(shm.s_nonce_share_key_a));
+								var rx_nonce_share_key_cert_requirecert = rx_tempbox.open(ArrayToUint8(shm.s_blackbox_a));
 								
-								if (rx_nonce_share_key) {
+								if (rx_nonce_share_key_cert_requirecert) {
 									// update secure info
-									self.theirNonce = rx_nonce_share_key.subarray(0, 8);
-									self.rxShareKey = rx_nonce_share_key.subarray(8);
+									self.theirNonce = rx_nonce_share_key_cert_requirecert.subarray(0, 8);
+									self.rxShareKey = rx_nonce_share_key_cert_requirecert.subarray(8, 8+Nacl.secretbox.keyLength);
+									
+									// check server's PublicKey Cert on V2 /////////////////////////////////////
+									var crstr, crobj;
+									if (PROTO_VERSION >= 2) {
+										// extract {cert, requirecert}
+										crstr = decodeUTF8(rx_nonce_share_key_cert_requirecert.subarray(8+Nacl.secretbox.keyLength));
+										crobj = JSON.parse(crstr);
+										
+										// check cert
+										if (!Naclcert.validate(crobj.cert, self.caCert)) {
+											console.log('Invalid server cert');
+											self.emit('error', 'Invalid server cert');
+											self.ws.close();
+											return;
+										}
+										if (!compareArray(shm.server_public_key, crobj.cert.desc.publickey)) {
+											console.log('Unexpected server cert');
+											self.emit('error', 'Unexpected server cert');
+											self.ws.close();
+											return;
+										}
+										// check domain or ip
+										var serverUrl = parseURL(self.url);
+										var srvDomain = serverUrl.hostname || '';
+										var srvIP = isNodeJS() ? self.remoteAddress() : '';
+										///console.log('expected server ip:'+srvIP);
+										///console.log('expected server domain:'+srvDomain);
+										if (!(Naclcert.checkDomain(crobj.cert, srvDomain) ||
+											  Naclcert.checkIP(crobj.cert, srvIP))) {
+											console.log('Invalid server endpoing');
+											self.emit('error', 'Invalid server endpoing');
+											self.ws.close();
+											return;
+										}
+										// record server's cert
+										self.peerCert = crobj.cert;
+									}
+									/////////////////////////////////////////////////////////////////////////////////
+																	
 									self.myNonce = Nacl.randomBytes(8);
 									self.txShareKey = Nacl.randomBytes(Nacl.secretbox.keyLength);
 									
@@ -131,21 +181,60 @@
 									self.txSecretBox = new SecretBox(self.txShareKey, self.myNonce);
 
 									// send ClientReady message
-									var tx_nonce_share_key = new Uint8Array(self.myNonce.length+self.txShareKey.length);
-									tx_nonce_share_key.set(self.myNonce); 
-									tx_nonce_share_key.set(self.txShareKey, self.myNonce.length);
+									var crm, tx_tempbox;
 											
-									// tx temp Box
-									var tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
-									var s_tx_nonce_share_key = tx_tempbox.box(tx_nonce_share_key);
-									
-									var crm = 
-									{
-											opc: 2, 
-											version: PROTO_VERSION,
+									// check if need cert on V2
+									if (PROTO_VERSION >= 2) {
+										// V2
+										var crmcert;
+										if (crobj && crobj.requireCert) {
+											if (self.myCert) {
+												crmcert = self.myCert;
+											} else {
+												console.log('Miss client cert');
+												self.emit('error', 'Miss client cert');
+												self.ws.close();
+												return;
+											}
+										} else {
+											crmcert = {};
+										}
+										var crmcertbuf = encodeUTF8(JSON.stringify(crmcert));
 
-											s_nonce_share_key_a: Uint8ToArray(s_tx_nonce_share_key)
-									};
+										var tx_nonce_share_key_cert = new Uint8Array(self.myNonce.length+self.txShareKey.length+crmcertbuf.length);
+										tx_nonce_share_key_cert.set(self.myNonce); 
+										tx_nonce_share_key_cert.set(self.txShareKey, self.myNonce.length);
+										tx_nonce_share_key_cert.set(crmcertbuf, self.myNonce.length+self.txShareKey.length);
+
+										// tx temp Box
+										tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
+										var s_tx_nonce_share_key_cert = tx_tempbox.box(tx_nonce_share_key_cert);
+
+										crm = 
+										{
+												opc: 2, 
+												version: PROTO_VERSION,
+
+												s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key_cert)
+										};
+									} else {
+										// V1
+										var tx_nonce_share_key = new Uint8Array(self.myNonce.length+self.txShareKey.length);
+										tx_nonce_share_key.set(self.myNonce); 
+										tx_nonce_share_key.set(self.txShareKey, self.myNonce.length);
+
+										// tx temp Box
+										var tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
+										var s_tx_nonce_share_key = tx_tempbox.box(tx_nonce_share_key);
+
+										crm = 
+										{
+												opc: 2, 
+												version: PROTO_VERSION,
+
+												s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key)
+										};
+									}						
 									///console.log("ClientReady message->:" + JSON.stringify(crm));
 																		
 									// send 
@@ -302,22 +391,57 @@
 								self.txSecretBox = new SecretBox(self.txShareKey, self.myNonce);
 
 								// send ServerHello message
-								var tx_nonce_share_key = new Uint8Array(self.myNonce.length+self.txShareKey.length);
-								tx_nonce_share_key.set(self.myNonce); 
-								tx_nonce_share_key.set(self.txShareKey, self.myNonce.length);
+								var shm, tx_tempbox;
+								
+								// check if need cert on V2
+								if (PROTO_VERSION >= 2) {
+									// V2
+									if (typeof self.myCert != 'object') {
+										console.log('Miss server cert');
+										self.emit('error', 'Miss server cert');
+										self.ws.close();
+										return;
+									}
+									var shmcertobj = {cert: self.myCert, requireCert: self.requireCert};
+									var shmcertbuf = encodeUTF8(JSON.stringify(shmcertobj));
 
-								// tx temp Box
-								var tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
-								var s_tx_nonce_share_key = tx_tempbox.box(tx_nonce_share_key);
+									var tx_nonce_share_key_cert_requirecert = 
+											new Uint8Array(self.myNonce.length+self.txShareKey.length+shmcertbuf.length);
+									tx_nonce_share_key_cert_requirecert.set(self.myNonce); 
+									tx_nonce_share_key_cert_requirecert.set(self.txShareKey, self.myNonce.length);
+									tx_nonce_share_key_cert_requirecert.set(shmcertbuf, self.myNonce.length+self.txShareKey.length);
 
-								var shm = 
-								{
-										opc: 1, 
-										version: PROTO_VERSION,
+									// tx temp Box
+									tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
+									var s_tx_nonce_share_key_cert_requirecert = tx_tempbox.box(tx_nonce_share_key_cert_requirecert);
 
-										server_public_key: Uint8ToArray(self.myPublicKey),
-										s_nonce_share_key_a: Uint8ToArray(s_tx_nonce_share_key)
-								};
+									shm = 
+									{
+											opc: 1, 
+											version: PROTO_VERSION,
+
+											server_public_key: Uint8ToArray(self.myPublicKey),
+											s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key_cert_requirecert)
+									};
+								} else {
+									// V1
+									var tx_nonce_share_key = new Uint8Array(self.myNonce.length+self.txShareKey.length);
+									tx_nonce_share_key.set(self.myNonce); 
+									tx_nonce_share_key.set(self.txShareKey, self.myNonce.length);
+
+									// tx temp Box
+									tx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
+									var s_tx_nonce_share_key = tx_tempbox.box(tx_nonce_share_key);
+
+									shm = 
+									{
+											opc: 1, 
+											version: PROTO_VERSION,
+
+											server_public_key: Uint8ToArray(self.myPublicKey),
+											s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key)
+									};
+								}
 								///console.log("ServerHello message->:" + JSON.stringify(shm));
 
 								// send 
@@ -350,19 +474,53 @@
 
 							if (crm && crm.opc === 2 && crm.version === PROTO_VERSION) {
 								///console.log('ClientReady message<-:'+JSON.stringify(crm));
-
-								// extract rxsharedKey, nonce
+								
+								// extract rxsharedKey, nonce, cert
 								var rx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.myNonce);
-								var rx_nonce_share_key = rx_tempbox.open(ArrayToUint8(crm.s_nonce_share_key_a));
+								var rx_nonce_share_key_cert = rx_tempbox.open(ArrayToUint8(crm.s_blackbox_a));
 
-								if (rx_nonce_share_key) {
+								if (rx_nonce_share_key_cert) {
 									// clear Handshake timeout
 									if (self.hs_tmo)
 										clearTimeout(self.hs_tmo);
 
 									// update secure info
-									self.theirNonce = rx_nonce_share_key.subarray(0, 8);
-									self.rxShareKey = rx_nonce_share_key.subarray(8);
+									self.theirNonce = rx_nonce_share_key_cert.subarray(0, 8);
+									self.rxShareKey = rx_nonce_share_key_cert.subarray(8, 8+Nacl.secretbox.keyLength);
+
+									// check client's PublicKey Cert on V2 /////////////////////////////////////
+									var certstr, certobj;
+									if (PROTO_VERSION >= 2 && self.requireCert) {
+										// extract cert
+										certstr = decodeUTF8(rx_nonce_share_key_cert.subarray(8+Nacl.secretbox.keyLength));
+										certobj = JSON.parse(certstr);
+
+										// check cert
+										if (!Naclcert.validate(certobj, self.caCert)) {
+											console.log('Invalid client cert');
+											self.emit('error', 'Invalid client cert');
+											self.ws.close();
+											return;
+										}
+										if (!compareArray(self.theirPublicKey, certobj.desc.publickey)) {
+											console.log('Unexpected client cert');
+											self.emit('error', 'Unexpected client cert');
+											self.ws.close();
+											return;
+										}
+										// check ip
+										var clnIP = self.remoteAddress();
+										///console.log('expected client ip:'+clnIP);
+										if (!Naclcert.checkIP(certobj, clnIP)) {
+											console.log('Invalid client endpoing');
+											self.emit('error', 'Invalid client endpoing');
+											self.ws.close();
+											return;
+										}
+										// record client's cert
+										self.peerCert = certobj;
+									}
+									/////////////////////////////////////////////////////////////////////////////////
 
 									// Construct NACL rx box
 									self.rxBox = new Box(self.theirPublicKey, self.mySecretKey, self.theirNonce);
@@ -419,6 +577,9 @@
 		
 		// Send cache
 		self.sendCache = [];
+		
+		// Browser compatible event API
+		// TBD...
 	};
 	SecureWebSocket.prototype.onopen = function(fn) {
 		///this.events['open'] = [];
@@ -442,9 +603,6 @@
 		this.ws.onclose = fn;
 	};
 
-	SecureWebSocket.prototype.close = function(fn) {
-	    this.ws.close();
-	};
 	SecureWebSocket.prototype.send = function(message, fn) {
 		var self = this;
 		var ret = true;
@@ -520,7 +678,25 @@
 		if (self.ws && self.ws.terminate) 
 			self.ws.terminate();
 	};
-	
+	SecureWebSocket.prototype.close = function(fn) {
+		var self = this;
+		if (self.ws && self.ws.close) 
+			self.ws.close();
+	};
+	// Address info
+	SecureWebSocket.prototype.remoteAddress = function() {
+		return this.ws._socket.remoteAddress;
+	};
+	SecureWebSocket.prototype.remotePort = function() {
+		return this.ws._socket.remotePort;
+	};
+	SecureWebSocket.prototype.localAddress = function() {
+		return this.ws._socket.address().address;
+	};
+	SecureWebSocket.prototype.localPort = function() {
+		return this.ws._socket.address().port;
+	};
+		
 	// EventEmitter
 	SecureWebSocket.prototype.on = function(event, fn) {
 		var self = this;
@@ -760,6 +936,68 @@
 		return (typeof module != 'undefined' && typeof window === 'undefined');
 	}
 	
+	function parseURL(url) {
+		if (isNodeJS()) {
+			var URL = require('url');
+			return URL.parse(url);
+		} else {
+			var parser = document.createElement('a'),
+				searchObject = {},
+				queries, split, i;
+			// Let the browser do the work
+			parser.href = url;
+			// Convert query string to object
+			queries = parser.search.replace(/^\?/, '').split('&');
+			for( i = 0; i < queries.length; i++ ) {
+				split = queries[i].split('=');
+				searchObject[split[0]] = split[1];
+			}
+			return {
+				    protocol: parser.protocol,
+				        host: parser.host,
+				    hostname: parser.hostname,
+				        port: parser.port,
+				    pathname: parser.pathname,
+				      search: parser.search,
+				searchObject: searchObject,
+				        hash: parser.hash
+			};
+		}
+	}
+
+	function encodeUTF8(ustr) {
+		if (isNodeJS()) { 
+			return new Uint8Array(new Buffer(ustr, 'utf8'));
+		} else {
+			var i, d = unescape(encodeURIComponent(ustr)), b = new Uint8Array(d.length);
+			for (i = 0; i < d.length; i++) b[i] = d.charCodeAt(i);
+			return b;
+		}
+	}
+
+	function decodeUTF8(ubuf) {
+		if (isNodeJS()) { 
+			return new Buffer(ubuf).toString('utf8');
+		} else {
+			var i, s = [];
+			for (i = 0; i < ubuf.length; i++) s.push(String.fromCharCode(ubuf[i]));
+			return decodeURIComponent(escape(s.join('')));
+		}
+	}
+	
+	function compareArray(a, b) {
+		///console.log('array a:'+JSON.stringify(a));
+		///console.log('array b:'+JSON.stringify(b));
+
+		if (a.length != b.length)
+			return false;
+		else for (var i = 0; i < a.length; i ++)
+			if (a[i]!==b[i])
+				return false;
+
+		return true;
+	}
+	
 	// Export 
 	Export.SecureWebSocket = SecureWebSocket;
 	
@@ -769,9 +1007,13 @@
 	Export.Box       = Box;
 	Export.SecretBox = SecretBox;
 	
+	// Nacl Cert
+	Export.Naclcert  = Naclcert;
+	
 	Export.ArrayToUint8  = ArrayToUint8;
 	Export.Uint8ToArray  = Uint8ToArray;
 	Export.Uint8ToBuffer = Uint8ToBuffer;
 })(typeof module  !== 'undefined' ? module.exports                    :(window.sws = window.sws || {}), 
    typeof require !== 'undefined' ? require('tweetnacl/nacl-fast.js') : window.nacl,
-   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket);
+   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket,
+   typeof require !== 'undefined' ? require('nacl-cert')              : window.naclcert);

@@ -43,6 +43,9 @@ module.exports.keyPair   = sws.keyPair;
 module.exports.Box       = sws.Box;
 module.exports.SecretBox = sws.SecretBox;
 
+// NACL Cert System
+module.exports.Naclcert  = sws.Naclcert;
+
 // Utils
 module.exports.ArrayToUint8  = sws.ArrayToUint8;
 module.exports.Uint8ToArray  = sws.Uint8ToArray;
