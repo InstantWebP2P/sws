@@ -32,6 +32,7 @@
 				
 		// Check on secinfo
 		secinfo = secinfo || {};
+		secinfo = secinfo.naclinfo || secinfo;
 		
 		// Check on Version
 		secinfo.version = secinfo.version || 1;
