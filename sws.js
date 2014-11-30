@@ -612,10 +612,15 @@
 		this.ws.onclose = fn;
 	};
 
-	SecureWebSocket.prototype.send = function(message, fn) {
+	SecureWebSocket.prototype.send = function(message, options, fn) {
 		var self = this;
 		var ret = true;
-
+		
+		if (typeof options === 'function') {
+			fn = options;
+			options = {};
+		}
+		
 		if (self.state === 'HandshakeDone') {
 			if (message) {
 				if (!(typeof message === 'string')) {
