@@ -7,9 +7,11 @@
 	var RECV_WATER_MARK = 16*1024;
 
 	// secure WebSocket 
-	var SecureWebSocket = function(url, secinfo) {
+	var SecureWebSocket = function(url, options) {
+		///console.log('sws, url:%s, options:%j', url, options);
+		
 		if (!(this instanceof SecureWebSocket))
-			return new SecureWebSocket(url, secinfo);
+			return new SecureWebSocket(url, options);
 		
 		var self = this;
 		
@@ -18,12 +20,12 @@
 		
 		// check parameters
 		if ((url && typeof url === 'string') && 
-			(secinfo && typeof secinfo === 'object')) {
+			(options && typeof options === 'object')) {
 			// Client
 			self.isServer = false;
 			self.url = url;
 		} else if ((url && url instanceof WebSocket) && 
-				   (secinfo && typeof secinfo === 'object')) {
+				   (options && typeof options === 'object')) {
 			// ServerClient
 			self.isServer = true;
 			self.ws = url;
@@ -31,8 +33,7 @@
 			throw new Error('Invalid parameters');
 				
 		// Check on secinfo
-		secinfo = secinfo || {};
-		secinfo = secinfo.naclinfo || secinfo;
+		var secinfo = options.naclinfo || options;
 		
 		// Check on Version
 		secinfo.version = secinfo.version || 1;
@@ -73,7 +74,7 @@
 		
 		self.state = 'new';
 		self.ws = self.isServer ? self.ws : 
-		         (isNodeJS() ? new WebSocket(url, secinfo) : new WebSocket(url));
+		         (isNodeJS() ? new WebSocket(url, options) : new WebSocket(url));
 		// use arrayBuffer as binaryType
 		self.ws.binaryType = 'arraybuffer';
 

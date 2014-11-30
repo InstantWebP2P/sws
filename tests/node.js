@@ -7,7 +7,7 @@ var msgpack = require('msgpack-js');
 
 var skp = nacl.box.keyPair();
 var wss = new SecureWebSocketServer(
-		{port: 6668, host: 'localhost', path: '/wspp'},
+		{port: 6668, host: 'localhost', path: '/wspp', httpp: true},
 		{
 				myPublicKey: skp.publicKey,
 				mySecretKey: skp.secretKey
@@ -28,6 +28,8 @@ var ckp = nacl.box.keyPair();
 var ws = new SecureWebSocket(
 		'ws://127.0.0.1:6668/wspp', 
 		{
+				httpp: true,
+				
 				myPublicKey: ckp.publicKey,
 				mySecretKey: ckp.secretKey
 		});
@@ -85,7 +87,7 @@ var clncert = naclcert.generate(clnReqDesc, rootCA.secretkey, rootCA.cert);
 
 
 var cwss = new SecureWebSocketServer(
-		{port: 6688, host: 'localhost', path: '/wspp'},
+		{port: 6688, host: 'localhost', path: '/wspp', httpp: true},
 		{
 				    version: 2,
 				       cert: srvcert,
@@ -109,13 +111,17 @@ cwss.on('connection', function(ws){
 
 var cws = new SecureWebSocket(
 		'ws://localhost:6688/wspp', 
-		{
-			    version: 2,
-			       cert: clncert,
-			         ca: rootCA.cert,
-			
-				myPublicKey: clnkp.publicKey,
-				mySecretKey: clnkp.secretKey
+		{         
+				httpp: true,
+
+				naclinfo: {
+					version: 2,
+					   cert: clncert,
+					     ca: rootCA.cert,
+
+					myPublicKey: clnkp.publicKey,
+					mySecretKey: clnkp.secretKey
+				}
 		});
 
 cws.onopen(function(){
@@ -142,5 +148,4 @@ cws.on('warn', function(warn){
 cws.on('error', function(err){
 	console.log('Error: '+JSON.stringify(err));
 });
-
 
