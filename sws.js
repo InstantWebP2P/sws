@@ -3,12 +3,13 @@
 
 
 (function(Export, Nacl, WebSocket, Naclcert){
+	var Debug = 0; 
 	var SEND_WATER_MARK = 16*1024;
 	var RECV_WATER_MARK = 16*1024;
 
 	// secure WebSocket 
 	var SecureWebSocket = function(url, options) {
-		///console.log('sws, url:%s, options:%j', url, options);
+		if (Debug > 1) console.log('sws, url:%s, options:%j', url, options);
 		
 		if (!(this instanceof SecureWebSocket))
 			return new SecureWebSocket(url, options);
@@ -78,6 +79,11 @@
 		// use arrayBuffer as binaryType
 		self.ws.binaryType = 'arraybuffer';
 
+		// capture ws error
+		self.ws.onerror = function(err) {
+			self.emit('error', 'ws err:'+err);
+		};
+		
 		// Handshake process
 		var client_handshake = function() {
 			// FSM: new->connected->HandshakeStart->SendClientHello->
@@ -90,7 +96,7 @@
 						
 			// Handshake message handle
 			self.ws.onmessage = function(msg){
-				///console.log('client msg,type:'+JSON.stringify(msg.type));
+				if (Debug > 1) console.log('client msg,type:'+JSON.stringify(msg.type));
 				
 				var message = msg.data;
 				var flags = {
@@ -125,7 +131,7 @@
 							var shm = JSON.parse(message);
 
 							if (shm && shm.opc === 1 && shm.version === PROTO_VERSION) {
-								///console.log('ServerHello message<-:'+JSON.stringify(shm));
+								if (Debug > 0) console.log('ServerHello message<-:'+JSON.stringify(shm));
 
 								self.theirPublicKey = ArrayToUint8(shm.server_public_key);
 
@@ -161,7 +167,7 @@
 										// check domain or ip
 										var serverUrl = parseURL(self.url);
 										var srvDomain = serverUrl.hostname || '';
-										var srvIP = isNodeJS() ? self.remoteAddress() : '';
+										var srvIP = isNodeJS() ? self.remoteAddress : '';
 										///console.log('expected server ip:'+srvIP);
 										///console.log('expected server domain:'+srvDomain);
 										if (!(Naclcert.checkDomain(crobj.cert, srvDomain) ||
@@ -238,7 +244,7 @@
 												s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key)
 										};
 									}						
-									///console.log("ClientReady message->:" + JSON.stringify(crm));
+									if (Debug > 0) console.log("ClientReady message->:" + JSON.stringify(crm));
 																		
 									// send 
 									try {
@@ -270,7 +276,7 @@
 											self.sendCache = [];
 
 											// emit Open event
-											self.emit("open");
+											self.emit('open', self);
 										}, 20);
 									} catch (e) {
 										console.log('send ClientReady immediately failed:'+e);
@@ -306,7 +312,7 @@
 				client_public_key: Uint8ToArray(self.myPublicKey),
 				nonce: Uint8ToArray(self.myNonce)
 			};
-			///console.log("ClientHello message->:" + JSON.stringify(chm));
+			if (Debug > 0) console.log("ClientHello message->:" + JSON.stringify(chm));
 
 			// send 
 			try {
@@ -345,7 +351,7 @@
 			
 			// Handshake message handle
 			self.ws.onmessage = function(msg){
-				///console.log('server msg,type:'+JSON.stringify(msg.type));
+				if (Debug > 1) console.log('server msg,type:'+JSON.stringify(msg.type));
 
 				var message = msg.data;
 				var flags = {
@@ -380,7 +386,7 @@
 							var chm = JSON.parse(message);
 
 							if (chm && chm.opc === 0 && chm.version === PROTO_VERSION) {
-								///console.log('ClientHello message<-:'+JSON.stringify(chm));
+								if (Debug > 0) console.log('ClientHello message<-:'+JSON.stringify(chm));
 								
 								// update secure info
 								self.theirPublicKey = ArrayToUint8(chm.client_public_key);
@@ -445,7 +451,7 @@
 											s_blackbox_a: Uint8ToArray(s_tx_nonce_share_key)
 									};
 								}
-								///console.log("ServerHello message->:" + JSON.stringify(shm));
+								if (Debug > 0) console.log("ServerHello message->:" + JSON.stringify(shm));
 
 								// send 
 								try {
@@ -476,7 +482,7 @@
 							var crm = JSON.parse(message);
 
 							if (crm && crm.opc === 2 && crm.version === PROTO_VERSION) {
-								///console.log('ClientReady message<-:'+JSON.stringify(crm));
+								if (Debug > 0) console.log('ClientReady message<-:'+JSON.stringify(crm));
 								
 								// extract rxsharedKey, nonce, cert
 								var rx_tempbox = new Box(self.theirPublicKey, self.mySecretKey, self.myNonce);
@@ -512,7 +518,7 @@
 											return;
 										}
 										// check ip
-										var clnIP = self.remoteAddress();
+										var clnIP = self.remoteAddress;
 										///console.log('expected client ip:'+clnIP);
 										if (!Naclcert.checkIP(certobj, clnIP)) {
 											console.log('Invalid client endpoing');
@@ -539,7 +545,7 @@
 									self.sendCache = [];
 
 									// emit Open event
-									self.emit("open");
+									self.emit('open', self);
 								} else {
 									self.emit('warn', 'Attacked ClientReady opc message:'+JSON.stringify(message));
 								}
@@ -686,20 +692,24 @@
 		if (self.ws && self.ws.close) 
 			self.ws.close();
 	};
-	// Address info
-	SecureWebSocket.prototype.remoteAddress = function() {
-		return this.ws._socket.remoteAddress;
-	};
-	SecureWebSocket.prototype.remotePort = function() {
-		return this.ws._socket.remotePort;
+	// Address info for Node.js
+	SecureWebSocket.prototype.address = function() {
+		return this.ws.address();
 	};
 	SecureWebSocket.prototype.localAddress = function() {
-		return this.ws._socket.address().address;
+		return this.ws.address().address;
 	};
 	SecureWebSocket.prototype.localPort = function() {
-		return this.ws._socket.address().port;
+		return this.ws.address().port;
 	};
-		
+	
+	SecureWebSocket.prototype.__defineGetter__('remoteAddress', function() {
+		return this.ws.remoteAddress;
+	});
+	SecureWebSocket.prototype.__defineGetter__('remotePort', function() {
+		return this.ws.remotePort;
+	});
+
 	// EventEmitter
 	SecureWebSocket.prototype.on = function(event, fn) {
 		var self = this;
