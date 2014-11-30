@@ -72,7 +72,8 @@
 		}
 		
 		self.state = 'new';
-		self.ws = self.isServer ? self.ws : new WebSocket(url);
+		self.ws = self.isServer ? self.ws : 
+		         (isNodeJS() ? new WebSocket(url, secinfo) : new WebSocket(url));
 		// use arrayBuffer as binaryType
 		self.ws.binaryType = 'arraybuffer';
 
