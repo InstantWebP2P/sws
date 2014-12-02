@@ -172,8 +172,8 @@
 										///console.log('expected server domain:'+srvDomain);
 										if (!(Naclcert.checkDomain(crobj.cert, srvDomain) ||
 											  Naclcert.checkIP(crobj.cert, srvIP))) {
-											console.log('Invalid server endpoing');
-											self.emit('error', 'Invalid server endpoing');
+											console.log('Invalid server endpoint');
+											self.emit('error', 'Invalid server endpoint');
 											self.ws.close();
 											return;
 										}
@@ -521,8 +521,8 @@
 										var clnIP = self.remoteAddress;
 										///console.log('expected client ip:'+clnIP);
 										if (!Naclcert.checkIP(certobj, clnIP)) {
-											console.log('Invalid client endpoing');
-											self.emit('error', 'Invalid client endpoing');
+											console.log('Invalid client endpoint');
+											self.emit('error', 'Invalid client endpoint');
 											self.ws.close();
 											return;
 										}
@@ -699,20 +699,20 @@
 	};
 	// Address info for Node.js
 	SecureWebSocket.prototype.address = function() {
-		return this.ws.address();
+		return (this.ws.address && this.ws.address()) || this.ws._socket.address();
 	};
 	SecureWebSocket.prototype.localAddress = function() {
-		return this.ws.address().address;
+		return this.address().address;
 	};
 	SecureWebSocket.prototype.localPort = function() {
-		return this.ws.address().port;
+		return this.address().port;
 	};
 	
 	SecureWebSocket.prototype.__defineGetter__('remoteAddress', function() {
-		return this.ws.remoteAddress;
+		return this.ws.remoteAddress || this.ws._socket.remoteAddress;
 	});
 	SecureWebSocket.prototype.__defineGetter__('remotePort', function() {
-		return this.ws.remotePort;
+		return this.ws.remotePort || this.ws._socket.remotePort;
 	});
 
 	// EventEmitter
@@ -1033,5 +1033,5 @@
 	Export.Uint8ToBuffer = Uint8ToBuffer;
 })(typeof module  !== 'undefined' ? module.exports                    :(window.sws = window.sws || {}), 
    typeof require !== 'undefined' ? require('tweetnacl/nacl-fast.js') : window.nacl,
-   typeof require !== 'undefined' ? require('wspp')                   : window.WebSocket,
+   typeof require !== 'undefined' ? require('ws')                     : window.WebSocket,
    typeof require !== 'undefined' ? require('nacl-cert')              : window.naclcert);
