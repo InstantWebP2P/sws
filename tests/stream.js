@@ -18,7 +18,7 @@ var ckp = SWS.keyPair();
 var csc = {myPublicKey: ckp.publicKey, mySecretKey: ckp.secretKey};
 
 var cln = SWS.connect('ws://localhost:6628/ss', csc);
-cln.onopen(function(){
+cln.on('open', function(){
 	///console.log('client connected');
 
 	// create stream over secure websocket

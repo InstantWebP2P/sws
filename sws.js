@@ -17,7 +17,7 @@
 		var self = this;
 		
 		// eventEmitter
-		self.events = {};
+		self.listeners = {};
 		
 		// check parameters
 		if ((url && typeof url === 'string') && 
@@ -79,9 +79,12 @@
 		// use arrayBuffer as binaryType
 		self.ws.binaryType = 'arraybuffer';
 
-		// capture ws error
+		// capture ws error, close
 		self.ws.onerror = function(err) {
-			self.emit('error', 'ws err:'+err);
+			self.emit('error', err);
+		};
+		self.ws.onclose = function(ev) {
+			self.emit('close', ev.code, ev.reason);
 		};
 		
 		// Handshake process
@@ -590,26 +593,25 @@
 		// Browser compatible event API
 		// TBD...
 	};
-	SecureWebSocket.prototype.onopen = function(fn) {
-		///this.events['open'] = [];
+	SecureWebSocket.prototype.onOpen = function(fn) {
+		///this.listeners['open'] = [];
 		this.on('open', fn);
 	};
-	SecureWebSocket.prototype.onmessage = function(fn) {
-		///this.events['message'] = [];
+	SecureWebSocket.prototype.onMessage = function(fn) {
+		///this.listeners['message'] = [];
 	    this.on('message', fn);
 	};
-	SecureWebSocket.prototype.onerror = function(fn) {
-		///this.events['error'] = [];
+	SecureWebSocket.prototype.onError = function(fn) {
+		///this.listeners['error'] = [];
 		this.on('error', fn);
-		this.ws.onerror = fn;
 	};
-	SecureWebSocket.prototype.onwarn = function(fn) {
-		///this.events['warn'] = [];
+	SecureWebSocket.prototype.onWarn = function(fn) {
+		///this.listeners['warn'] = [];
 		this.on('warn', fn);
 	};
-	SecureWebSocket.prototype.onclose = function(fn) {
-		///this.events['close'] = [];
-		this.ws.onclose = fn;
+	SecureWebSocket.prototype.onClose = function(fn) {
+		///this.listeners['close'] = [];
+		this.on('close', fn);
 	};
 
 	SecureWebSocket.prototype.send = function(message, options, fn) {
@@ -714,15 +716,22 @@
 	SecureWebSocket.prototype.__defineGetter__('remotePort', function() {
 		return this.ws.remotePort || this.ws._socket.remotePort;
 	});
-
+	
 	// EventEmitter
 	SecureWebSocket.prototype.on = function(event, fn) {
 		var self = this;
 		
-		self.events[event] = self.events[event] || [];
+		self.listeners[event] = self.listeners[event] || [];
 		
-		self.events[event].push(fn);
+		self.listeners[event].push(fn);
 		
+		return self;
+	};	
+	SecureWebSocket.prototype.removeAllListeners = function(event) {
+		var self = this;
+
+		self.listeners[event] = [];
+
 		return self;
 	};	
 	SecureWebSocket.prototype.emit = function() {		
@@ -730,8 +739,8 @@
 		var event = arguments[0] || 'unknown';
 		var args = Array.prototype.slice.call(arguments, 1);
 
-		if (self.events && self.events[event]) {
-			self.events[event].forEach(function(fn) {
+		if (self.listeners && self.listeners[event]) {
+			self.listeners[event].forEach(function(fn) {
 				if (fn && typeof fn === 'function')
 					fn.apply(self, args);
 			});
@@ -741,8 +750,133 @@
 		}
 
 		return true;
+	};
+
+	/**
+	 * Emulates the W3C Browser based WebSocket interface using function members.
+	 *
+	 * @see http://dev.w3.org/html5/websockets/#the-websocket-interface
+	 * @api public
+	 */
+	['open', 'error', 'close', 'message'].forEach(function(method) {
+		Object.defineProperty(SecureWebSocket.prototype, 'on' + method, {
+				/**
+				 * Returns the current listener
+				 *
+				 * @returns {Mixed} the set function or undefined
+				 * @api public
+				 */
+				get: function get() {
+					var listener = this.listeners(method)[0];
+					return listener ? (listener._listener ? listener._listener : listener) : undefined;
+				},
+
+				/**
+				 * Start listening for events
+				 *
+				 * @param {Function} listener the listener
+				 * @returns {Mixed} the set function or undefined
+				 * @api public
+				 */
+				set: function set(listener) {
+					this.removeAllListeners(method);
+					this.addEventListener(method, listener);
+				}
+		});
+	});
+
+	/**
+	 * Emulates the W3C Browser based WebSocket interface using addEventListener.
+	 *
+	 * @see https://developer.mozilla.org/en/DOM/element.addEventListener
+	 * @see http://dev.w3.org/html5/websockets/#the-websocket-interface
+	 * @api public
+	 */
+	SecureWebSocket.prototype.addEventListener = function(method, listener) {
+		var target = this;
+
+		function onMessage (data, flags) {
+			listener.call(target, new MessageEvent(data, flags.binary ? 'Binary' : 'Text', target));
+		}
+
+		function onClose (code, message) {
+			listener.call(target, new CloseEvent(code, message, target));
+		}
+
+		function onError (event) {
+			event.target = target;
+			listener.call(target, event);
+		}
+
+		function onOpen () {
+			listener.call(target, new OpenEvent(target));
+		}
+
+		if (typeof listener === 'function') {
+			if (method === 'message') {
+				// store a reference so we can return the original function from the
+				// addEventListener hook
+				onMessage._listener = listener;
+				this.on(method, onMessage);
+			} else if (method === 'close') {
+				// store a reference so we can return the original function from the
+				// addEventListener hook
+				onClose._listener = listener;
+				this.on(method, onClose);
+			} else if (method === 'error') {
+				// store a reference so we can return the original function from the
+				// addEventListener hook
+				onError._listener = listener;
+				this.on(method, onError);
+			} else if (method === 'open') {
+				// store a reference so we can return the original function from the
+				// addEventListener hook
+				onOpen._listener = listener;
+				this.on(method, onOpen);
+			} else {
+				this.on(method, listener);
+			}
+		}
+	};
+
+	/**
+	 * W3C MessageEvent
+	 *
+	 * @see http://www.w3.org/TR/html5/comms.html
+	 * @constructor
+	 * @api private
+	 */
+	function MessageEvent(dataArg, typeArg, target) {
+		this.data = dataArg;
+		this.type = typeArg;
+		this.target = target;
 	}
-	
+
+	/**
+	 * W3C CloseEvent
+	 *
+	 * @see http://www.w3.org/TR/html5/comms.html
+	 * @constructor
+	 * @api private
+	 */
+	function CloseEvent(code, reason, target) {
+		this.wasClean = (typeof code === 'undefined' || code === 1000);
+		this.code = code;
+		this.reason = reason;
+		this.target = target;
+	}
+
+	/**
+	 * W3C OpenEvent
+	 *
+	 * @see http://www.w3.org/TR/html5/comms.html
+	 * @constructor
+	 * @api private
+	 */
+	function OpenEvent(target) {
+		this.target = target;
+	}
+
 	// NACL wrapper
 	var Box = function(theirPublicKey, mySecretKey, nonce) {
 		if (!(this instanceof Box))

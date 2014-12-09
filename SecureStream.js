@@ -24,7 +24,7 @@ var SecureStream = module.exports = function(sws, options) {
 	// Collect data
 	self.sws = sws;
 	
-	self.sws.onmessage(function(message, flags) {
+	self.sws.on('message', function(message, flags) {
 		///console.log('ss message:'+JSON.stringify(message));
 
 		if (message && Buffer.isBuffer(message)) {
@@ -41,15 +41,15 @@ var SecureStream = module.exports = function(sws, options) {
 		}
 	});
 	// check close
-	self.sws.onclose(function(){
+	self.sws.on('close', function(){
 		self.push(null);
 	});
 	// check error
-	self.sws.onerror(function(err){
+	self.sws.on('error', function(err){
 		self.emit('error', 'sws error:'+JSON.stringify(err));
 	});
 	// check warn
-	self.sws.onwarn(function(warn){
+	self.sws.on('warn', function(warn){
 		self.emit('warn', 'sws warn:'+JSON.stringify(warn));
 	});
 }

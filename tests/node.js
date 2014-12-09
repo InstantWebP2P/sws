@@ -32,10 +32,10 @@ var ws = new SecureWebSocket(
 				mySecretKey: ckp.secretKey
 		});
 
-ws.onopen(function(){
+ws.on('open', function(){
 	console.log('secure ws connected');
 	
-	ws.onmessage(function(message, flags){
+	ws.on('message', function(message, flags){
 		///console.log('cln msg:'+JSON.stringify(message));
 
 		if (flags.binary) {
@@ -120,10 +120,10 @@ var cws = new SecureWebSocket(
 				}
 		});
 
-cws.onopen(function(){
+cws.on('open', function(){
 	console.log('V2 secure ws connected');
 	
-	ws.onmessage(function(message, flags){
+	ws.on('message', function(message, flags){
 		///console.log('cln msg:'+JSON.stringify(message));
 
 		if (flags.binary) {
