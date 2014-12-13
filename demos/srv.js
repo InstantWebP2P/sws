@@ -35,6 +35,10 @@ swss.on('connection', function(ws){
 			console.log('Not support String message');
 		}
 	});
+	
+	ws.on('close', function(){
+		console.log('sws closed');
+	});
 });
 
 // V2 with NaclCert
@@ -74,6 +78,10 @@ swss2.on('connection', function(ws){
 		} else {
 			console.log('Not support String message');
 		}
+	});
+
+	ws.on('close', function(){
+		console.log('sws closed');
 	});
 });
 
