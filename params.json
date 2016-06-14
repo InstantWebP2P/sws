@@ -1,1 +1,7 @@
-{"name":"Sws","tagline":"SecureWebSocket implementation over NACL","body":"sws\r\n===\r\n\r\nSecureWebSocket implementation over NACL\r\n\r\n\r\n### API/Usage\r\n\r\n* In Node.js, refer to tests/node.js\r\n* In Browser, refer to demos/srv.js, demos/content/\r\n* Used as stream, refer to tests/stream.js, support Node.js only\r\n\r\n\r\n### Spec/RFC\r\n\r\n* https://github.com/InstantWebP2P/sws-spec\r\n\r\n\r\n### Install\r\n\r\n* npm install node-sws\r\n\r\n\r\n<br/>\r\n### License\r\n(The MIT License)\r\n\r\nCopyright (c) 2014 Tom Zhou(iwebpp@gmail.com)\r\n","google":"","note":"Don't delete this file! It's used internally to help with page regeneration."}
+{
+  "name": "Sws",
+  "tagline": "SecureWebSocket implementation over NACL",
+  "body": "sws\r\n===\r\n\r\nSecureWebSocket implementation over NACL\r\n\r\n\r\n### API/Usage\r\n\r\n* In Node.js, refer to tests/node.js\r\n* In Browser, refer to demos/srv.js, demos/content/\r\n* Used as stream, refer to tests/stream.js, support Node.js only\r\n\r\n\r\n### Spec/RFC\r\n\r\n* https://github.com/InstantWebP2P/sws-spec\r\n\r\n\r\n### Install\r\n\r\n* npm install node-sws\r\n\r\n\r\n<br/>\r\n### License\r\n(The MIT License)\r\n\r\nCopyright (c) 2014 Tom Zhou(iwebpp@gmail.com)\r\n",
+  "google": "",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
