@@ -1,5 +1,5 @@
-sws
-===
+sws - SecureWebSocket
+=====================
 
 Securing WebSocket even over HTTP instead of HTTPS using NACL
 
