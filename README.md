@@ -1,7 +1,7 @@
 sws
 ===
 
-SecureWebSocket implementation over NACL
+Securing WebSocket even over HTTP instead of HTTPS using NACL
 
 
 ### API/Usage
