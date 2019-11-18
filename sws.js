@@ -118,7 +118,7 @@
 							self.rxSecretBox.incrNonce();
 							
 							// notify data
-							// TBD... optimizing on Uint8Array To Buffer copy
+							// TBD... optimizing on Uint8Array To avoid Buffer copy
 							self.emit('message', Uint8ToBuffer(plain), {binary: true});
 						} else {
 							self.emit('warn', 'Attacked message:'+JSON.stringify(message));
