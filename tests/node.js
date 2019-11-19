@@ -26,7 +26,7 @@ wss.on('connection', function(ws){
 
 var ckp = nacl.box.keyPair();
 var ws = new SecureWebSocket(
-		'ws://127.0.0.1:6668/wspp', 
+		'ws://localhost:6668/wspp', 
 		{
 				myPublicKey: ckp.publicKey,
 				mySecretKey: ckp.secretKey
@@ -59,13 +59,13 @@ ws.on('error', function(err){
 
 // V2 with NaclCert
 var naclcert = require('nacl-cert');
-var rootCA = naclcert.generateCA({name: 'iwebpp.com', tte: new Date('2020-01-01').getTime()});
+var rootCA = naclcert.generateCA({name: 'iwebpp.com', tte: new Date('3030-01-01').getTime()});
 
 var srvkp = nacl.box.keyPair();
 var srvReqDesc = {
 	version: '1.0',
 	type: 'ca',
-	tte: new Date('2016-01-01').getTime(),
+	tte: new Date('2026-01-01').getTime(),
 	publickey: naclcert.Uint8ToArray(srvkp.publicKey),
 	names: ['localhost', '51dese.com', 'ruyier.com', 'localhost'],
 	ips: ['127.0.0.1']
@@ -76,7 +76,7 @@ var clnkp = nacl.box.keyPair();
 var clnReqDesc = {
 	version: '1.0',
 	type: 'ca',
-	tte: new Date('2016-01-01').getTime(),
+	tte: new Date('2026-01-01').getTime(),
 	publickey: naclcert.Uint8ToArray(clnkp.publicKey),
 	names: ['localhost'],
 	ips: ['127.0.0.1']
@@ -96,7 +96,7 @@ var cwss = new SecureWebSocketServer(
 				mySecretKey: srvkp.secretKey,
 		});
 cwss.on('connection', function(ws){
-	ws.on('message', function(message, flags){
+	cws.on('message', function(message, flags){
 		///console.log('srv msg:'+JSON.stringify(message));
 		
 		if (flags.binary) {
@@ -123,7 +123,7 @@ var cws = new SecureWebSocket(
 cws.on('open', function(){
 	console.log('V2 secure ws connected');
 	
-	ws.on('message', function(message, flags){
+	cws.on('message', function(message, flags){
 		///console.log('cln msg:'+JSON.stringify(message));
 
 		if (flags.binary) {
