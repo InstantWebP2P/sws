@@ -96,7 +96,7 @@ var cwss = new SecureWebSocketServer(
 				mySecretKey: srvkp.secretKey,
 		});
 cwss.on('connection', function(ws){
-	cws.on('message', function(message, flags){
+	ws.on('message', function(message, flags){
 		///console.log('srv msg:'+JSON.stringify(message));
 		
 		if (flags.binary) {
