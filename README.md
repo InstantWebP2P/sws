@@ -11,9 +11,7 @@ Securing WebSocket even over HTTP instead of HTTPS using NACL
 * Used as stream, refer to tests/stream.js, support Node.js only
 
 
-### Spec/RFC
-
-* https://github.com/InstantWebP2P/sws-spec
+### [SecureWebSocket Spec/RFC](https://github.com/InstantWebP2P/sws-spec)
 
 
 ### Install
