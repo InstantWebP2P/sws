@@ -6,7 +6,7 @@ Securing WebSocket even over HTTP instead of HTTPS using NACL
 
 ### API/Usage
 
-* In Node.js, refer to [tests/node.js](test/node.js)
+* In Node.js, refer to [tests/node.js](tests/node.js)
 * In Browser, refer to [demos/srv.js](demos/srv.js), [demos/content/](demos/content/)
 * Used as stream, refer to tests/stream.js, support Node.js only
 
