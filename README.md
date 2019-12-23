@@ -23,4 +23,4 @@ Securing WebSocket even over HTTP instead of HTTPS using NACL
 ### License
 (The MIT License)
 
-Copyright (c) 2014 Tom Zhou(iwebpp@gmail.com)
+Copyright (c) 2014-present Tom Zhou(iwebpp@gmail.com)
