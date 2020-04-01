@@ -1,5 +1,5 @@
 {
-  "author": "Tom Zhou (http://iwebpp.com)",
+  "author": "Tom Zhou <iwebpp@gmail.com> (https://aiworkspace.com)",
   "name": "node-sws",
   "description": "SecureWebSocket implementation over NACL",
   "version": "1.2.1",

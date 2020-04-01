@@ -59,7 +59,7 @@ ws.on('error', function(err){
 
 // V2 with NaclCert
 var naclcert = require('nacl-cert');
-var rootCA = naclcert.generateCA({name: 'iwebpp.com', tte: new Date('3030-01-01').getTime()});
+var rootCA = naclcert.generateCA({name: '51dese.com', tte: new Date('3030-01-01').getTime()});
 
 var srvkp = nacl.box.keyPair();
 var srvReqDesc = {
