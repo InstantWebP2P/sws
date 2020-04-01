@@ -1,5 +1,5 @@
 // SecureWebSocket Server implementation with NACL
-// Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
+// Copyright (c) 2014 Tom Zhou<appnet.link@gmail.com>
 
 
 var util = require('util');

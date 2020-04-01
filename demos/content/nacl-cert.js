@@ -1,5 +1,5 @@
 // Nacl certification implementation
-// Copyright (c) 2014 Tom Zhou<iwebpp@gmail.com>
+// Copyright (c) 2014 Tom Zhou<appnet.link@gmail.com>
 
 
 (function(Export, Nacl, UUID){
