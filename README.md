@@ -19,7 +19,6 @@ Securing WebSocket even over HTTP instead of HTTPS using NACL
 * npm install node-sws
 
 
-<br/>
 ### License
 (The MIT License)
 
